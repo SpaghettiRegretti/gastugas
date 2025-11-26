@@ -42,7 +42,6 @@ import Modal from "./Modal";
 import ItemForm from "./ItemForm";
 import { MenuCard } from "./MenuCard";
 import QRCodeDisplay from "./QRCode";
-import { MapPin, Clock, Phone, Palette, Check } from "lucide-react";
 
 // Stat Card Component
 function StatCard({ icon: Icon, label, value, trend, color }) {
@@ -163,7 +162,7 @@ function Sidebar({ isOpen, onClose, currentPage, onNavigate }) {
         </nav>
 
         {/* User & Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+        <div className="absolute left-0 right-0 p-4 border-t bg-white">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
               <Users size={18} className="text-green-600" />
@@ -304,22 +303,13 @@ function DashboardOverview({ items }) {
 }
 
 // Settings Page
-// File: src/components/AdminDashboard.jsx
-// Tambahkan ini ke dalam Settings Page function
-
-function SettingsPage({ settings, onSave, lang, toggleLang }) {
+function SettingsPage({ settings, onSave }) {
+  const { t, lang, toggleLang } = useLanguage();
   const [form, setForm] = useState({
     storeName: settings.storeName || "",
-    storeLocation: settings.storeLocation || "",
-    operatingHours: settings.operatingHours || "",
     whatsappNumber: settings.whatsappNumber || "",
-    template: settings.template || "minimalist",
   });
   const [saved, setSaved] = useState(false);
-
-  const handleChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
 
   const handleSave = async () => {
     await onSave(form);
@@ -327,91 +317,43 @@ function SettingsPage({ settings, onSave, lang, toggleLang }) {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleSaveSettings = (newSettings) => {
-    setSettings(newSettings);
-    setTemplate(newSettings.template); // Terapkan template
-  };
-
-  const templates = [
-    {
-      id: "minimalist",
-      name: "Minimalist",
-      description:
-        lang === "id"
-          ? "Desain bersih dan sederhana dengan warna hijau"
-          : "Clean and simple design with green colors",
-      preview: "from-green-500 to-emerald-600",
-    },
-    {
-      id: "colorful",
-      name: "Colorful",
-      description:
-        lang === "id"
-          ? "Desain penuh warna dengan tema ungu"
-          : "Vibrant design with purple theme",
-      preview: "from-purple-500 to-pink-600",
-    },
-  ];
-
   return (
-    <div className="max-w-2xl space-y-6">
-      {/* Store Info Card */}
+    <div className="max-w-xl space-y-6">
       <div className="bg-white rounded-xl border p-6 space-y-4">
-        <h3 className="font-semibold flex items-center gap-2">
-          <Store size={18} className="text-green-600" />
-          {lang === "id" ? "Informasi Toko" : "Store Information"}
+        <h3 className="font-semibold">
+          {lang === "id" ? "Pengaturan Toko" : "Store Settings"}
         </h3>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            {lang === "id" ? "Nama Toko" : "Store Name"}
+            {t.storeName}
           </label>
           <input
             type="text"
             value={form.storeName}
-            onChange={(e) => handleChange("storeName", e.target.value)}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                storeName: e.target.value,
+              }))
+            }
             className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Warung Makan Berkah"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-            <MapPin size={14} />
-            {lang === "id" ? "Lokasi Toko" : "Store Location"}
-          </label>
-          <input
-            type="text"
-            value={form.storeLocation}
-            onChange={(e) => handleChange("storeLocation", e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Jl. Contoh No. 123, Jakarta"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-            <Clock size={14} />
-            {lang === "id" ? "Jam Operasional" : "Operating Hours"}
-          </label>
-          <input
-            type="text"
-            value={form.operatingHours}
-            onChange={(e) => handleChange("operatingHours", e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="09:00 - 21:00"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-            <Phone size={14} />
-            {lang === "id" ? "Nomor WhatsApp" : "WhatsApp Number"}
+          <label className="block text-sm font-medium mb-1">
+            {t.whatsappNumber}
           </label>
           <input
             type="text"
             value={form.whatsappNumber}
-            onChange={(e) => handleChange("whatsappNumber", e.target.value)}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                whatsappNumber: e.target.value,
+              }))
+            }
             className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
             placeholder="628123456789"
           />
@@ -426,84 +368,12 @@ function SettingsPage({ settings, onSave, lang, toggleLang }) {
               : "bg-green-600 text-white hover:bg-green-700"
           }`}
         >
-          {saved
-            ? lang === "id"
-              ? "Tersimpan!"
-              : "Saved!"
-            : lang === "id"
-            ? "Simpan"
-            : "Save"}
+          {saved ? (lang === "id" ? "Tersimpan!" : "Saved!") : t.save}
         </button>
       </div>
 
-      {/* Template Card */}
-      <div className="bg-white rounded-xl border p-6 space-y-4">
-        <h3 className="font-semibold flex items-center gap-2">
-          <Palette size={18} className="text-purple-600" />
-          Template
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {templates.map((template) => (
-            <button
-              key={template.id}
-              onClick={() => handleChange("template", template.id)}
-              className={`relative p-4 border-2 rounded-xl transition-all hover:shadow-md text-left ${
-                form.template === template.id
-                  ? "border-green-500 bg-green-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              {/* Preview */}
-              <div
-                className={`w-full h-24 rounded-lg mb-3 bg-gradient-to-br ${template.preview}`}
-              />
-
-              {/* Info */}
-              <div>
-                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                  {template.name}
-                  {form.template === template.id && (
-                    <Check size={16} className="text-green-600" />
-                  )}
-                </h4>
-                <p className="text-xs text-gray-500 mt-1">
-                  {template.description}
-                </p>
-              </div>
-
-              {/* Selected Badge */}
-              {form.template === template.id && (
-                <div className="absolute top-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <Check size={14} className="text-white" />
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <button
-          onClick={handleSave}
-          className={`w-full py-2 rounded-lg font-medium transition-colors ${
-            saved
-              ? "bg-green-100 text-green-600"
-              : "bg-green-600 text-white hover:bg-green-700"
-          }`}
-        >
-          {saved
-            ? lang === "id"
-              ? "Template Tersimpan!"
-              : "Template Saved!"
-            : lang === "id"
-            ? "Terapkan Template"
-            : "Apply Template"}
-        </button>
-      </div>
-
-      {/* Language Card */}
       <div className="bg-white rounded-xl border p-6">
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Globe size={18} className="text-blue-600" />
+        <h3 className="font-semibold mb-4">
           {lang === "id" ? "Bahasa" : "Language"}
         </h3>
         <button

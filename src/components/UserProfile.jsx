@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     User,
@@ -8,16 +8,32 @@ import {
     LogOut,
     Globe,
     Package,
+    Edit2,
+    Save,
+    X,
+    Lock,
+    Eye,
+    EyeOff,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { supabase } from "../config/supabase";
 
 export function UserProfile() {
     const navigate = useNavigate();
     const { user, signOut } = useAuth();
     const { t, lang, toggleLang } = useLanguage();
 
-    // Mock order history - in real app, fetch from Supabase
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [isEditingPassword, setIsEditingPassword] = useState(false);
+    const [name, setName] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState({ type: "", text: "" });
+
+    // Mock order history
     const [orders] = useState([
         {
             id: 1,
@@ -45,6 +61,14 @@ export function UserProfile() {
     const totalSpent = orders.reduce((sum, o) => sum + o.total, 0);
     const totalOrders = orders.length;
 
+    useEffect(() => {
+        if (user) {
+            setName(
+                user.user_metadata?.name || user.email?.split("@")[0] || ""
+            );
+        }
+    }, [user]);
+
     const formatPrice = (p) => new Intl.NumberFormat("id-ID").format(p);
     const formatDate = (d) =>
         new Date(d).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", {
@@ -52,6 +76,95 @@ export function UserProfile() {
             month: "short",
             year: "numeric",
         });
+
+    const showMessage = (type, text) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage({ type: "", text: "" }), 3000);
+    };
+
+    const handleUpdateName = async () => {
+        if (!name.trim()) {
+            showMessage(
+                "error",
+                lang === "id"
+                    ? "Nama tidak boleh kosong"
+                    : "Name cannot be empty"
+            );
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.updateUser({
+                data: { name: name.trim() },
+            });
+
+            if (error) throw error;
+
+            // Update in user_profiles table
+            await supabase
+                .from("user_profiles")
+                .update({ name: name.trim() })
+                .eq("id", user.id);
+
+            showMessage(
+                "success",
+                lang === "id"
+                    ? "Nama berhasil diperbarui!"
+                    : "Name updated successfully!"
+            );
+            setIsEditingName(false);
+        } catch (err) {
+            showMessage("error", err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdatePassword = async () => {
+        if (newPassword.length < 6) {
+            showMessage(
+                "error",
+                lang === "id"
+                    ? "Password minimal 6 karakter"
+                    : "Password must be at least 6 characters"
+            );
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showMessage(
+                "error",
+                lang === "id"
+                    ? "Password tidak cocok"
+                    : "Passwords do not match"
+            );
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: newPassword,
+            });
+
+            if (error) throw error;
+
+            showMessage(
+                "success",
+                lang === "id"
+                    ? "Password berhasil diperbarui!"
+                    : "Password updated successfully!"
+            );
+            setIsEditingPassword(false);
+            setNewPassword("");
+            setConfirmPassword("");
+        } catch (err) {
+            showMessage("error", err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleLogout = async () => {
         await signOut();
@@ -79,9 +192,9 @@ export function UserProfile() {
                     <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
                         <User size={32} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                         <p className="font-semibold text-lg">
-                            {user?.user_metadata?.name || "User"}
+                            {name || "User"}
                         </p>
                         <p className="text-green-100 text-sm flex items-center gap-1">
                             <Mail size={14} />
@@ -90,6 +203,19 @@ export function UserProfile() {
                     </div>
                 </div>
             </div>
+
+            {/* Message Toast */}
+            {message.text && (
+                <div
+                    className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-sm ${
+                        message.type === "success"
+                            ? "bg-green-500 text-white"
+                            : "bg-red-500 text-white"
+                    }`}
+                >
+                    {message.text}
+                </div>
+            )}
 
             {/* Stats */}
             <div className="p-4 -mt-4">
@@ -128,6 +254,184 @@ export function UserProfile() {
                             </p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Edit Profile Section */}
+            <div className="p-4">
+                <h2 className="font-semibold mb-3">
+                    {lang === "id" ? "Informasi Akun" : "Account Information"}
+                </h2>
+
+                {/* Edit Name */}
+                <div className="bg-white rounded-xl border p-4 mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-gray-700">
+                            {lang === "id" ? "Nama Lengkap" : "Full Name"}
+                        </label>
+                        {!isEditingName && (
+                            <button
+                                onClick={() => setIsEditingName(true)}
+                                className="p-1.5 hover:bg-gray-100 rounded-lg"
+                            >
+                                <Edit2 size={16} className="text-blue-500" />
+                            </button>
+                        )}
+                    </div>
+
+                    {isEditingName ? (
+                        <div className="space-y-2">
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                placeholder={
+                                    lang === "id"
+                                        ? "Masukkan nama"
+                                        : "Enter name"
+                                }
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        setIsEditingName(false);
+                                        setName(
+                                            user?.user_metadata?.name || ""
+                                        );
+                                    }}
+                                    className="flex-1 px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                                    disabled={loading}
+                                >
+                                    <X size={16} className="inline mr-1" />
+                                    {lang === "id" ? "Batal" : "Cancel"}
+                                </button>
+                                <button
+                                    onClick={handleUpdateName}
+                                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm disabled:opacity-50"
+                                    disabled={loading}
+                                >
+                                    <Save size={16} className="inline mr-1" />
+                                    {loading
+                                        ? lang === "id"
+                                            ? "Menyimpan..."
+                                            : "Saving..."
+                                        : lang === "id"
+                                        ? "Simpan"
+                                        : "Save"}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-900 font-medium">
+                            {name || "-"}
+                        </p>
+                    )}
+                </div>
+
+                {/* Edit Password */}
+                <div className="bg-white rounded-xl border p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-gray-700">
+                            {lang === "id" ? "Password" : "Password"}
+                        </label>
+                        {!isEditingPassword && (
+                            <button
+                                onClick={() => setIsEditingPassword(true)}
+                                className="p-1.5 hover:bg-gray-100 rounded-lg"
+                            >
+                                <Edit2 size={16} className="text-blue-500" />
+                            </button>
+                        )}
+                    </div>
+
+                    {isEditingPassword ? (
+                        <div className="space-y-3">
+                            <div className="relative">
+                                <Lock
+                                    size={16}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                />
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={newPassword}
+                                    onChange={(e) =>
+                                        setNewPassword(e.target.value)
+                                    }
+                                    className="w-full pl-10 pr-10 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder={
+                                        lang === "id"
+                                            ? "Password baru"
+                                            : "New password"
+                                    }
+                                    minLength={6}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setShowPassword(!showPassword)
+                                    }
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff size={16} />
+                                    ) : (
+                                        <Eye size={16} />
+                                    )}
+                                </button>
+                            </div>
+                            <div className="relative">
+                                <Lock
+                                    size={16}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                />
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={confirmPassword}
+                                    onChange={(e) =>
+                                        setConfirmPassword(e.target.value)
+                                    }
+                                    className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder={
+                                        lang === "id"
+                                            ? "Konfirmasi password"
+                                            : "Confirm password"
+                                    }
+                                    minLength={6}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        setIsEditingPassword(false);
+                                        setNewPassword("");
+                                        setConfirmPassword("");
+                                    }}
+                                    className="flex-1 px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                                    disabled={loading}
+                                >
+                                    <X size={16} className="inline mr-1" />
+                                    {lang === "id" ? "Batal" : "Cancel"}
+                                </button>
+                                <button
+                                    onClick={handleUpdatePassword}
+                                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm disabled:opacity-50"
+                                    disabled={loading}
+                                >
+                                    <Save size={16} className="inline mr-1" />
+                                    {loading
+                                        ? lang === "id"
+                                            ? "Menyimpan..."
+                                            : "Saving..."
+                                        : lang === "id"
+                                        ? "Simpan"
+                                        : "Save"}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-900 font-medium">••••••••</p>
+                    )}
                 </div>
             </div>
 
