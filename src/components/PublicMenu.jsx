@@ -94,7 +94,6 @@ function MenuItemCard({ item, onClick }) {
     );
 }
 
-// Modal Detail Item
 function ItemDetailModal({ item, isOpen, onClose, onAddToCart }) {
     const { t, lang } = useLanguage();
     const [quantity, setQuantity] = useState(1);
@@ -121,7 +120,6 @@ function ItemDetailModal({ item, isOpen, onClose, onAddToCart }) {
                 className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Image */}
                 <div className="relative aspect-video bg-gray-100">
                     {item.photo ? (
                         <img
@@ -149,7 +147,6 @@ function ItemDetailModal({ item, isOpen, onClose, onAddToCart }) {
                     )}
                 </div>
 
-                {/* Content */}
                 <div className="p-5">
                     <h2 className="text-xl font-bold text-gray-900">
                         {item.name}
@@ -164,7 +161,6 @@ function ItemDetailModal({ item, isOpen, onClose, onAddToCart }) {
                         </p>
                     )}
 
-                    {/* Quantity */}
                     <div className="mt-5">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             {lang === "id" ? "Jumlah Pesanan" : "Quantity"}
@@ -190,7 +186,6 @@ function ItemDetailModal({ item, isOpen, onClose, onAddToCart }) {
                         </div>
                     </div>
 
-                    {/* Note */}
                     <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             {lang === "id"
@@ -210,7 +205,6 @@ function ItemDetailModal({ item, isOpen, onClose, onAddToCart }) {
                         />
                     </div>
 
-                    {/* Add Button */}
                     <button
                         onClick={handleAdd}
                         className="w-full mt-5 flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3.5 rounded-xl font-semibold transition-colors"
@@ -245,15 +239,29 @@ export function PublicMenu() {
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
+    // Filter and group items
     const filteredItems = items
-        .filter(
-            (item) =>
-                selectedCategory === "all" || item.category === selectedCategory
-        )
         .filter((item) =>
             item.name.toLowerCase().includes(search.toLowerCase())
         )
         .sort((a, b) => a.order - b.order);
+
+    // Group by category for "all" view
+    const groupedItems = {};
+    if (selectedCategory === "all") {
+        CATEGORIES.slice(1).forEach((cat) => {
+            const categoryItems = filteredItems.filter(
+                (item) => item.category === cat
+            );
+            if (categoryItems.length > 0) {
+                groupedItems[cat] = categoryItems;
+            }
+        });
+    } else {
+        groupedItems[selectedCategory] = filteredItems.filter(
+            (item) => item.category === selectedCategory
+        );
+    }
 
     const addToCart = (item, qty = 1, note = "") => {
         incrementViews(item.id);
@@ -274,18 +282,30 @@ export function PublicMenu() {
         setSelectedItem(item);
     };
 
+    // FIXED: Auto remove when qty = 0
     const updateQty = (id, delta) => {
-        setCart((prev) =>
-            prev
+        setCart((prev) => {
+            return prev
                 .map((item) => {
                     if (item.id === id) {
                         const newQty = item.qty + delta;
-                        return newQty > 0 ? { ...item, qty: newQty } : item;
+                        return { ...item, qty: newQty };
                     }
                     return item;
                 })
-                .filter((item) => item.qty > 0)
-        );
+                .filter((item) => item.qty > 0); // Auto remove if qty = 0
+        });
+    };
+
+    // Direct set quantity (with auto remove)
+    const setItemQty = (id, qty) => {
+        if (qty <= 0) {
+            removeFromCart(id);
+        } else {
+            setCart((prev) =>
+                prev.map((item) => (item.id === id ? { ...item, qty } : item))
+            );
+        }
     };
 
     const updateItemNote = (id, note) => {
@@ -330,68 +350,89 @@ export function PublicMenu() {
     };
 
     const orderTypeEmoji = {
-        "dine-in": String.fromCodePoint(0x1f37d), // 🍽
-        takeaway: String.fromCodePoint(0x1f961), // 🥡
-        delivery: String.fromCodePoint(0x1f69a), // 🚚
+        "dine-in": String.fromCodePoint(0x1f37d),
+        takeaway: String.fromCodePoint(0x1f961),
+        delivery: String.fromCodePoint(0x1f69a),
     };
 
-    // FIXED: Generate WhatsApp message dengan emoji yang benar
     const generateWhatsAppMessage = () => {
-        let lines = [];
-        lines.push(
-            lang === "id" ? "=== PESANAN BARU ===" : "=== NEW ORDER ==="
-        );
-        lines.push("");
-        lines.push(settings.storeName || "Store");
-        lines.push(getDateTime());
-        lines.push("-------------------");
-        lines.push("");
-        if (customerName)
-            lines.push((lang === "id" ? "Nama: " : "Name: ") + customerName);
-        lines.push(
-            (lang === "id" ? "Tipe: " : "Type: ") + orderTypeLabels[orderType]
-        );
-        if (orderType === "dine-in" && tableNumber)
-            lines.push(
-                (lang === "id" ? "No. Meja: " : "Table: ") + tableNumber
-            );
-        lines.push("");
-        lines.push(
-            lang === "id" ? "--- DETAIL PESANAN ---" : "--- ORDER DETAILS ---"
-        );
-        lines.push("");
-        cart.forEach((item, i) => {
-            lines.push(i + 1 + ". " + item.name);
-            lines.push("   " + item.qty + "x @ Rp " + formatPrice(item.price));
-            lines.push("   = Rp " + formatPrice(item.price * item.qty));
-            if (item.note) lines.push("   Catatan: " + item.note);
-            lines.push("");
-        });
-        lines.push("-------------------");
-        lines.push(
-            "TOTAL: Rp " +
-                formatPrice(totalPrice) +
-                " (" +
-                totalItems +
-                " item)"
-        );
-        lines.push("-------------------");
-        if (customerNote) {
-            lines.push("");
-            lines.push((lang === "id" ? "Catatan: " : "Note: ") + customerNote);
+        const cart_emoji = String.fromCodePoint(0x1f6d2);
+        const store_emoji = String.fromCodePoint(0x1f3ea);
+        const calendar_emoji = String.fromCodePoint(0x1f4c5);
+        const person_emoji = String.fromCodePoint(0x1f464);
+        const memo_emoji = String.fromCodePoint(0x1f4dd);
+        const money_emoji = String.fromCodePoint(0x1f4b0);
+        const pin_emoji = String.fromCodePoint(0x1f4cc);
+        const sparkle_emoji = String.fromCodePoint(0x2728);
+        const chair_emoji = String.fromCodePoint(0x1fa91);
+        const check_emoji = String.fromCodePoint(0x2705);
+
+        const storeName = settings.storeName || "Store";
+        const dateTime = getDateTime();
+        const LINE = String.fromCodePoint(0x2500).repeat(20);
+
+        let msg = "";
+        msg += cart_emoji + " *PESANAN BARU*\n";
+        msg += LINE + "\n";
+        msg += store_emoji + " *" + storeName + "*\n";
+        msg += calendar_emoji + " " + dateTime + "\n";
+        msg += LINE + "\n\n";
+
+        if (customerName) {
+            msg += person_emoji + " *Nama:* " + customerName + "\n";
         }
-        lines.push("");
-        lines.push(lang === "id" ? "Terima kasih!" : "Thank you!");
-        return lines.join("\n");
+        msg +=
+            orderTypeEmoji[orderType] +
+            " *" +
+            orderTypeLabels[orderType] +
+            "*\n";
+
+        if (orderType === "dine-in" && tableNumber) {
+            msg += chair_emoji + " *No. Meja:* " + tableNumber + "\n";
+        }
+        msg += "\n";
+
+        msg += memo_emoji + " *DETAIL PESANAN:*\n";
+        msg += LINE + "\n\n";
+
+        cart.forEach((item, index) => {
+            const itemTotal = item.price * item.qty;
+            msg += index + 1 + ". *" + item.name + "*\n";
+            msg +=
+                "   " + item.qty + "x @ Rp " + formatPrice(item.price) + "\n";
+            msg += "   " + check_emoji + " Rp " + formatPrice(itemTotal) + "\n";
+            if (item.note) {
+                msg += "   " + memo_emoji + " _" + item.note + "_\n";
+            }
+            msg += "\n";
+        });
+
+        msg += LINE + "\n";
+        msg += money_emoji + " *TOTAL: Rp " + formatPrice(totalPrice) + "*\n";
+        msg += "(" + totalItems + " item)\n";
+        msg += LINE + "\n";
+
+        if (customerNote) {
+            msg += "\n" + pin_emoji + " *Catatan:*\n";
+            msg += customerNote + "\n";
+        }
+
+        msg += "\n" + sparkle_emoji + " ";
+        msg +=
+            lang === "id"
+                ? "Terima kasih telah memesan!"
+                : "Thank you for ordering!";
+        msg += "\n_via BookletKu_";
+
+        return msg;
     };
 
     const orderViaWhatsApp = () => {
         const message = generateWhatsAppMessage();
         const phone = (settings.whatsappNumber || "").replace(/[^0-9]/g, "");
-        window.open(
-            "https://wa.me/" + phone + "?text=" + encodeURIComponent(message),
-            "_blank"
-        );
+        const url =
+            "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
+        window.open(url, "_blank");
     };
 
     return (
@@ -556,9 +597,9 @@ export function PublicMenu() {
                 </div>
             </div>
 
-            {/* Menu Grid */}
-            <div className="p-4">
-                {filteredItems.length === 0 ? (
+            {/* Menu Grid - GROUPED BY CATEGORY */}
+            <div className="p-4 space-y-6">
+                {Object.keys(groupedItems).length === 0 ? (
                     <div className="text-center py-16">
                         <Store
                             size={48}
@@ -569,19 +610,38 @@ export function PublicMenu() {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {filteredItems.map((item) => (
-                            <MenuItemCard
-                                key={item.id}
-                                item={item}
-                                onClick={() => handleItemClick(item)}
-                            />
-                        ))}
-                    </div>
+                    Object.entries(groupedItems).map(
+                        ([category, categoryItems]) => (
+                            <div key={category}>
+                                {/* Category Header */}
+                                <div className="flex items-center gap-3 mb-3">
+                                    <h2 className="text-lg font-bold text-gray-900">
+                                        {t[category] || category}
+                                    </h2>
+                                    <div className="flex-1 h-px bg-gray-200"></div>
+                                    <span className="text-sm text-gray-500">
+                                        {categoryItems.length} item
+                                    </span>
+                                </div>
+
+                                {/* Items Grid */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                    {categoryItems.map((item) => (
+                                        <MenuItemCard
+                                            key={item.id}
+                                            item={item}
+                                            onClick={() =>
+                                                handleItemClick(item)
+                                            }
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    )
                 )}
             </div>
 
-            {/* Item Detail Modal */}
             <ItemDetailModal
                 item={selectedItem}
                 isOpen={!!selectedItem}
@@ -589,7 +649,6 @@ export function PublicMenu() {
                 onAddToCart={addToCart}
             />
 
-            {/* Floating Cart Button */}
             {cart.length > 0 && !showCart && (
                 <button
                     onClick={() => setShowCart(true)}
@@ -659,9 +718,23 @@ export function PublicMenu() {
                                                 >
                                                     <Minus size={10} />
                                                 </button>
-                                                <span className="text-sm font-medium">
-                                                    {item.qty}
-                                                </span>
+
+                                                {/* Editable quantity input */}
+                                                <input
+                                                    type="number"
+                                                    value={item.qty}
+                                                    onChange={(e) =>
+                                                        setItemQty(
+                                                            item.id,
+                                                            parseInt(
+                                                                e.target.value
+                                                            ) || 0
+                                                        )
+                                                    }
+                                                    className="w-12 text-center text-sm font-medium border rounded py-0.5 outline-none focus:ring-1 focus:ring-green-500"
+                                                    min="0"
+                                                />
+
                                                 <button
                                                     onClick={() =>
                                                         updateQty(item.id, 1)
