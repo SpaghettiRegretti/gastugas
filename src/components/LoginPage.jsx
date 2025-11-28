@@ -12,10 +12,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { supabase } from "../config/supabase";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, userRole } = useAuth();
   const { t, lang } = useLanguage();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -42,9 +43,26 @@ export function LoginPage() {
 
     try {
       if (isLogin) {
-        const { data, error } = await signIn(form.email, form.password);
-        if (error) throw error;
-        navigate("/");
+        if (isLogin) {
+          const { data, error } = await signIn(form.email, form.password);
+          if (error) throw error;
+
+          /// Fetch role directly from database after login
+          const { data: profile } = await supabase
+            .from("user_profiles")
+            .select("role")
+            .eq("id", data.user.id)
+            .single();
+
+          // Redirect using actual role
+          if (profile?.role === "admin") {
+            navigate("/admin");
+          } else {
+            navigate("/");
+          }
+
+          return;
+        }
       } else {
         if (!form.name.trim()) {
           throw new Error(
