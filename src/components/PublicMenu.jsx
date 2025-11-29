@@ -511,29 +511,39 @@ export default function PublicMenu() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Language toggle (Globe) */}
+            {/* Language toggle - Make it white/styled */}
             <button
               onClick={() => toggleLang && toggleLang()}
               title={lang === "id" ? "Ganti bahasa" : "Toggle language"}
-              className={`${colors.button} text-white px-4 py-2 rounded-lg`}
+              className="p-2 rounded-lg transition-all"
+              style={{ backgroundColor: colors.primary }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.primaryDark;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = colors.primary;
+              }}
               aria-label="Toggle language"
             >
-              <Globe size={18} className="text-gray-600" />
+              <Globe size={18} className="text-white" />
             </button>
 
             {/* Simple 'i' info icon */}
             <button
               onClick={() => setShowStoreDetails((s) => !s)}
               title={lang === "id" ? "Info toko" : "Store info"}
-              className="p-2 rounded-md hover:bg-gray-100"
+              className="p-2 rounded-md hover:bg-gray-100 transition-all"
               aria-label="Store info"
             >
               <span
-                className={`w-7 h-7 rounded-full border flex items-center justify-center font-semibold text-sm ${
-                  showStoreDetails
-                    ? "${colors.button} text-white border-${colors.button}"
-                    : "text-${colors.button} border-gray-200"
-                }`}
+                className="w-7 h-7 rounded-full border flex items-center justify-center font-semibold text-sm transition-all"
+                style={{
+                  color: showStoreDetails ? "white" : colors.primary,
+                  backgroundColor: showStoreDetails
+                    ? colors.primary
+                    : "transparent",
+                  borderColor: colors.primary,
+                }}
               >
                 i
               </span>
@@ -542,9 +552,9 @@ export default function PublicMenu() {
             {/* Login/Profile (kept as requested) */}
             <button
               onClick={() => navigate("/login")}
-              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50"
+              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 transition-all"
             >
-              <UserIconFallback />
+              <UserIconFallback colors={colors} />
               <span className="text-sm">
                 {user ? t?.profile || "Profile" : t?.login || "Login"}
               </span>

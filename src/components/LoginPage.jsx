@@ -12,12 +12,16 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useTemplate } from "../contexts/TemplateContext";
+import { getTemplateColors } from "./TemplateSettings";
 import { supabase } from "../config/supabase";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { signIn, signUp, userRole } = useAuth();
   const { t, lang } = useLanguage();
+  const { template } = useTemplate();
+  const colors = getTemplateColors(template);
 
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +32,7 @@ export function LoginPage() {
     email: "",
     password: "",
     name: "",
-    role: "user", // 'user' or 'admin'
+    role: "user",
   });
 
   const handleChange = (field, value) => {
@@ -43,26 +47,22 @@ export function LoginPage() {
 
     try {
       if (isLogin) {
-        if (isLogin) {
-          const { data, error } = await signIn(form.email, form.password);
-          if (error) throw error;
+        const { data, error } = await signIn(form.email, form.password);
+        if (error) throw error;
 
-          /// Fetch role directly from database after login
-          const { data: profile } = await supabase
-            .from("user_profiles")
-            .select("role")
-            .eq("id", data.user.id)
-            .single();
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
 
-          // Redirect using actual role
-          if (profile?.role === "admin") {
-            navigate("/admin");
-          } else {
-            navigate("/");
-          }
-
-          return;
+        if (profile?.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/");
         }
+
+        return;
       } else {
         if (!form.name.trim()) {
           throw new Error(
@@ -94,7 +94,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br  style={{ color: colors${colors.gradient}.primary }} flex items-center justify-center p-4">
+    <div
+      className={`min-h-screen bg-gradient-to-br ${colors.gradient} flex items-center justify-center p-4`}
+    >
       <div className="w-full max-w-md">
         {/* Back to menu */}
         <button
@@ -108,12 +110,14 @@ export function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r ${colors.gradient} p-6 text-white text-center">
+          <div
+            className={`bg-gradient-to-r ${colors.gradient} p-6 text-white text-center`}
+          >
             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <Store size={32} />
             </div>
             <h1 className="text-2xl font-bold">BookletKu</h1>
-            <p className="text-[#cccfe7] text-sm">{t.tagline}</p>
+            <p className="text-white/80 text-sm">{t.tagline}</p>
           </div>
 
           {/* Tabs */}
@@ -122,9 +126,17 @@ export function LoginPage() {
               onClick={() => setIsLogin(true)}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 isLogin
-                  ? " style={{ color: colors.primary }} border-b-2 border-[#666fb8]"
+                  ? `text-[${colors.primary}] border-b-2 border-[${colors.primary}]`
                   : "text-gray-500"
               }`}
+              style={
+                isLogin
+                  ? {
+                      color: colors.primary,
+                      borderBottomColor: colors.primary,
+                    }
+                  : {}
+              }
             >
               {lang === "id" ? "Masuk" : "Login"}
             </button>
@@ -132,9 +144,17 @@ export function LoginPage() {
               onClick={() => setIsLogin(false)}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 !isLogin
-                  ? " style={{ color: colors.primary }} border-b-2 border-[#666fb8]"
+                  ? `text-[${colors.primary}] border-b-2 border-[${colors.primary}]`
                   : "text-gray-500"
               }`}
+              style={
+                !isLogin
+                  ? {
+                      color: colors.primary,
+                      borderBottomColor: colors.primary,
+                    }
+                  : {}
+              }
             >
               {lang === "id" ? "Daftar" : "Register"}
             </button>
@@ -157,7 +177,8 @@ export function LoginPage() {
                     type="text"
                     value={form.name}
                     onChange={(e) => handleChange("name", e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-[#666fb8]"
+                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg outline-none focus:ring-2 transition-all"
+                    style={{ focusRingColor: colors.primary }}
                     placeholder="John Doe"
                   />
                 </div>
@@ -178,7 +199,8 @@ export function LoginPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-[#666fb8]"
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg outline-none focus:ring-2 transition-all"
+                  style={{ focusRingColor: colors.primary }}
                   placeholder="email@example.com"
                   required
                 />
@@ -199,7 +221,8 @@ export function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={(e) => handleChange("password", e.target.value)}
-                  className="w-full pl-10 pr-12 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-[#666fb8]"
+                  className="w-full pl-10 pr-12 py-2.5 border rounded-lg outline-none focus:ring-2 transition-all"
+                  style={{ focusRingColor: colors.primary }}
                   placeholder="********"
                   required
                   minLength={6}
@@ -224,22 +247,36 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => handleChange("role", "user")}
-                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
+                    style={
                       form.role === "user"
-                        ? "bg-[#666fb8]  text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                        ? {
+                            backgroundColor: colors.primary,
+                            color: "white",
+                          }
+                        : {
+                            backgroundColor: "#f3f4f6",
+                            color: "#374151",
+                          }
+                    }
                   >
                     {lang === "id" ? "Pelanggan" : "Customer"}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleChange("role", "admin")}
-                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
+                    style={
                       form.role === "admin"
-                        ? "bg-[#666fb8]  text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                        ? {
+                            backgroundColor: colors.primary,
+                            color: "white",
+                          }
+                        : {
+                            backgroundColor: "#f3f4f6",
+                            color: "#374151",
+                          }
+                    }
                   >
                     {lang === "id" ? "Pemilik Toko" : "Store Owner"}
                   </button>
@@ -250,11 +287,18 @@ export function LoginPage() {
             {/* Error Message */}
             {error && (
               <div
-                className={`p-3 rounded-lg text-sm ${
+                className="p-3 rounded-lg text-sm"
+                style={
                   error.includes("berhasil") || error.includes("successful")
-                    ? "bg-[#e6e8f7]  style={{ color: colors.primary }}"
-                    : "bg-red-50 text-red-600"
-                }`}
+                    ? {
+                        backgroundColor: `${colors.primary}20`,
+                        color: colors.primary,
+                      }
+                    : {
+                        backgroundColor: "#fee2e2",
+                        color: "#dc2626",
+                      }
+                }
               >
                 {error}
               </div>
@@ -264,7 +308,26 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-[#666fb8]  text-white rounded-lg font-medium hover:bg-[#333fa1]  disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-white"
+              style={
+                loading
+                  ? {
+                      backgroundColor: colors.primary,
+                      opacity: 0.5,
+                      cursor: "not-allowed",
+                    }
+                  : {
+                      backgroundColor: colors.primary,
+                    }
+              }
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = colors.primaryDark;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = colors.primary;
+              }}
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
               {isLogin

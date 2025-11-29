@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useTemplate } from "../contexts/TemplateContext";
+import { getTemplateColors } from "./TemplateSettings";
 import { supabase } from "../config/supabase";
 import Toast from "./Toast";
 
@@ -24,6 +26,8 @@ export function UserProfile() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { t, lang, toggleLang } = useLanguage();
+  const { template } = useTemplate();
+  const colors = getTemplateColors(template);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
@@ -34,7 +38,6 @@ export function UserProfile() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ message: "", type: "" });
 
-  // Mock order history
   const [orders] = useState([
     {
       id: 1,
@@ -98,7 +101,6 @@ export function UserProfile() {
 
       if (error) throw error;
 
-      // Update in user_profiles table
       await supabase
         .from("user_profiles")
         .update({ name: name.trim() })
@@ -175,7 +177,7 @@ export function UserProfile() {
       />
 
       {/* Header */}
-      <div className="bg-gradient-to-r ${colors.gradient} text-white p-4">
+      <div className={`bg-gradient-to-r ${colors.gradient} text-white p-4`}>
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate("/")}
@@ -195,7 +197,7 @@ export function UserProfile() {
           </div>
           <div className="flex-1">
             <p className="font-semibold text-lg">{name || "User"}</p>
-            <p className="text-[#cccfe7] text-sm flex items-center gap-1">
+            <p className="text-white/80 text-sm flex items-center gap-1">
               <Mail size={14} />
               {user?.email || "user@example.com"}
             </p>
@@ -203,29 +205,16 @@ export function UserProfile() {
         </div>
       </div>
 
-      {/* Message Toast */}
-      {message.text && (
-        <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-sm ${
-            message.type === "success"
-              ? "bg-[#666fb8]  text-white"
-              : "bg-red-500 text-white"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
-
       {/* Stats */}
       <div className="p-4 -mt-4">
         <div className="bg-white rounded-xl shadow-sm border p-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <ShoppingBag
-                  size={20}
-                  className=" style={{ color: colors.primary }}"
-                />
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2"
+                style={{ backgroundColor: `${colors.primary}20` }}
+              >
+                <ShoppingBag size={20} style={{ color: colors.primary }} />
               </div>
               <p className="text-2xl font-bold text-gray-900">{totalOrders}</p>
               <p className="text-xs text-gray-500">
@@ -233,7 +222,10 @@ export function UserProfile() {
               </p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2"
+                style={{ backgroundColor: "#e9d5ff" }}
+              >
                 <Package size={20} className="text-purple-600" />
               </div>
               <p className="text-2xl font-bold text-gray-900">
@@ -264,7 +256,7 @@ export function UserProfile() {
                 onClick={() => setIsEditingName(true)}
                 className="p-1.5 hover:bg-gray-100 rounded-lg"
               >
-                <Edit2 size={16} className="text-blue-500" />
+                <Edit2 size={16} style={{ color: colors.primary }} />
               </button>
             )}
           </div>
@@ -275,7 +267,8 @@ export function UserProfile() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#666fb8]"
+                className="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 transition-all"
+                style={{ focusRingColor: colors.primary }}
                 placeholder={lang === "id" ? "Masukkan nama" : "Enter name"}
               />
               <div className="flex gap-2">
@@ -292,7 +285,14 @@ export function UserProfile() {
                 </button>
                 <button
                   onClick={handleUpdateName}
-                  className="flex-1 px-3 py-2 bg-[#666fb8]  text-white rounded-lg hover:bg-[#666fb8]  text-sm disabled:opacity-50"
+                  className="flex-1 px-3 py-2 text-white rounded-lg text-sm disabled:opacity-50 transition-all"
+                  style={{ backgroundColor: colors.primary }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = colors.primaryDark;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = colors.primary;
+                  }}
                   disabled={loading}
                 >
                   <Save size={16} className="inline mr-1" />
@@ -322,7 +322,7 @@ export function UserProfile() {
                 onClick={() => setIsEditingPassword(true)}
                 className="p-1.5 hover:bg-gray-100 rounded-lg"
               >
-                <Edit2 size={16} className="text-blue-500" />
+                <Edit2 size={16} style={{ color: colors.primary }} />
               </button>
             )}
           </div>
@@ -338,7 +338,8 @@ export function UserProfile() {
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#666fb8]"
+                  className="w-full pl-10 pr-10 py-2 border rounded-lg outline-none focus:ring-2 transition-all"
+                  style={{ focusRingColor: colors.primary }}
                   placeholder={lang === "id" ? "Password baru" : "New password"}
                   minLength={6}
                 />
@@ -359,7 +360,8 @@ export function UserProfile() {
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#666fb8]"
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg outline-none focus:ring-2 transition-all"
+                  style={{ focusRingColor: colors.primary }}
                   placeholder={
                     lang === "id" ? "Konfirmasi password" : "Confirm password"
                   }
@@ -381,7 +383,14 @@ export function UserProfile() {
                 </button>
                 <button
                   onClick={handleUpdatePassword}
-                  className="flex-1 px-3 py-2 bg-[#666fb8]  text-white rounded-lg hover:bg-[#666fb8]  text-sm disabled:opacity-50"
+                  className="flex-1 px-3 py-2 text-white rounded-lg text-sm disabled:opacity-50 transition-all"
+                  style={{ backgroundColor: colors.primary }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = colors.primaryDark;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = colors.primary;
+                  }}
                   disabled={loading}
                 >
                   <Save size={16} className="inline mr-1" />
@@ -411,7 +420,10 @@ export function UserProfile() {
             <div key={order.id} className="bg-white rounded-xl border p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium">Order #{order.id}</p>
-                <span className="px-2 py-0.5 bg-green-100 text-[#333fa1] text-xs rounded-full">
+                <span
+                  className="px-2 py-0.5 text-xs rounded-full text-white"
+                  style={{ backgroundColor: colors.primary }}
+                >
                   {order.status === "completed"
                     ? lang === "id"
                       ? "Selesai"
@@ -424,7 +436,7 @@ export function UserProfile() {
                 <span>{order.items} item</span>
               </div>
               <div className="mt-2 pt-2 border-t">
-                <p className="font-bold  style={{ color: colors.primary }}">
+                <p className="font-bold" style={{ color: colors.primary }}>
                   Rp {formatPrice(order.total)}
                 </p>
               </div>
@@ -453,7 +465,7 @@ export function UserProfile() {
             className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
           >
             <div className="flex items-center gap-3">
-              <Globe size={20} className="text-gray-500" />
+              <Globe size={20} style={{ color: colors.primary }} />
               <span>{lang === "id" ? "Bahasa" : "Language"}</span>
             </div>
             <span className="text-gray-500">
