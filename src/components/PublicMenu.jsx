@@ -13,6 +13,8 @@ import {
   Package as PackageIcon,
   Truck,
   Globe,
+  ShoppingBag,
+  MessageCircle,
 } from "lucide-react";
 
 import { useLanguage } from "../contexts/LanguageContext";
@@ -21,6 +23,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import Toast from "./Toast";
 import { useTemplate } from "../contexts/TemplateContext";
 import { getTemplateColors } from "./TemplateSettings";
+
 /*
   PublicMenu - Blue themed + Dine-in / Takeaway / Delivery
   Layout: Large image cards (A)
@@ -114,7 +117,7 @@ function MenuItemCardLarge({ item, onClick }) {
   );
 }
 
-function ItemDetailModal({ item, isOpen, onClose, onAdd }) {
+function ItemDetailModal({ item, isOpen, onClose, onAdd, colors }) {
   const { t, lang } = useLanguage();
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState("");
@@ -157,7 +160,7 @@ function ItemDetailModal({ item, isOpen, onClose, onAdd }) {
 
           <button
             onClick={onClose}
-            className={`${colors.button} text-white px-4 py-2 rounded-lg`}
+            className="absolute top-4 right-4 p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
             aria-label="Close"
           >
             <X size={18} />
@@ -174,7 +177,10 @@ function ItemDetailModal({ item, isOpen, onClose, onAdd }) {
 
         <div className="p-5">
           <h2 className="text-xl font-bold text-gray-900">{item.name}</h2>
-          <p className="text-2xl font-bold  style={{ color: colors.primary }} mt-2">
+          <p
+            className="text-2xl font-bold mt-2"
+            style={{ color: colors?.primary || "#666fb8" }}
+          >
             Rp {formatPrice(item.price)}
           </p>
 
@@ -192,7 +198,8 @@ function ItemDetailModal({ item, isOpen, onClose, onAdd }) {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className={`${colors.button} text-white px-4 py-2 rounded-lg`}
+                className="px-4 py-2 rounded-lg text-white transition-colors"
+                style={{ backgroundColor: colors?.primary || "#666fb8" }}
                 aria-label="Decrease"
               >
                 <Minus size={18} />
@@ -204,7 +211,8 @@ function ItemDetailModal({ item, isOpen, onClose, onAdd }) {
 
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-10 h-10 flex items-center justify-center border rounded-lg hover:border-[#666fb8]"
+                className="w-10 h-10 flex items-center justify-center border rounded-lg transition-colors"
+                style={{ borderColor: colors?.primary || "#666fb8" }}
                 aria-label="Increase"
               >
                 <Plus size={18} />
@@ -225,15 +233,17 @@ function ItemDetailModal({ item, isOpen, onClose, onAdd }) {
                   ? "Contoh: pedas, tanpa sayur..."
                   : "e.g. spicy, no vegetables..."
               }
-              className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#666fb8]"
+              className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 outline-none transition-all"
+              style={{ focusRingColor: colors?.primary || "#666fb8" }}
             />
           </div>
 
           <button
             onClick={handleAdd}
-            className={`${colors.button} text-white px-4 py-2 rounded-lg`}
+            className="w-full mt-4 px-4 py-3 rounded-lg text-white font-medium transition-colors"
+            style={{ backgroundColor: colors?.primary || "#666fb8" }}
           >
-            <ShoppingCart size={18} />
+            <ShoppingCart size={18} className="inline mr-2" />
             {lang === "id" ? "Tambah ke Keranjang" : "Add to Cart"} - Rp{" "}
             {formatPrice(totalPrice)}
           </button>
@@ -242,7 +252,6 @@ function ItemDetailModal({ item, isOpen, onClose, onAdd }) {
     </div>
   );
 }
-
 function OrderTypeModal({ isOpen, onClose, onSelect }) {
   const { lang } = useLanguage();
 
@@ -301,7 +310,9 @@ function OrderTypeModal({ isOpen, onClose, onSelect }) {
                 onClick={() => {
                   if (onSelect) onSelect(type.id);
                 }}
-                className={`${colors.button} text-white px-4 py-2 rounded-lg`}
+                className={`${
+                  colors?.button || "bg-blue-500"
+                } text-white px-4 py-2 rounded-lg`}
               >
                 <div
                   className={`w-12 h-12 rounded-lg bg-gradient-to-br ${type.color} flex items-center justify-center`}
@@ -321,7 +332,9 @@ function OrderTypeModal({ isOpen, onClose, onSelect }) {
 
           <button
             onClick={onClose}
-            className={`${colors.button} text-white px-4 py-2 rounded-lg`}
+            className={`${
+              colors?.button || "bg-blue-500"
+            } text-white px-4 py-2 rounded-lg`}
           >
             {lang === "id" ? "Batal" : "Cancel"}
           </button>
@@ -454,19 +467,79 @@ export default function PublicMenu() {
 
   const orderViaWhatsApp = () => {
     const phone = (settings?.whatsappNumber || "").replace(/[^0-9]/g, "");
-    const message = generateWhatsAppMessage();
+
     if (!phone) {
       showToast(
         lang === "id"
-          ? "Nomor WhatsApp belum diset."
-          : "WhatsApp number not set.",
+          ? "❌ Nomor WhatsApp belum diatur"
+          : "❌ WhatsApp number not set",
         "error"
       );
       return;
     }
-    const url =
-      "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
-    window.open(url, "_blank");
+
+    const storeName = settings?.storeName || "BookletKu";
+    const lines = [];
+
+    lines.push("🛒 PESANAN BARU 🛒");
+    lines.push("");
+    lines.push(`*Toko: ${storeName}*`);
+    lines.push(
+      `*Waktu: ${new Date().toLocaleString(lang === "id" ? "id-ID" : "en-US")}*`
+    );
+    lines.push("═══════════════════");
+    lines.push("");
+
+    if (selectedOrderType) {
+      const typeLabels = {
+        "dine-in": lang === "id" ? "🍽️ Makan di Tempat" : "🍽️ Dine In",
+        takeaway: lang === "id" ? "📦 Bawa Pulang" : "📦 Takeaway",
+        delivery: lang === "id" ? "🚗 Delivery" : "🚗 Delivery",
+      };
+      lines.push(typeLabels[selectedOrderType] || selectedOrderType);
+      lines.push("");
+    }
+
+    lines.push(lang === "id" ? "*📋 PESANAN:*" : "*📋 ORDER:*");
+    lines.push("");
+
+    cart.forEach((item, idx) => {
+      const itemTotal = item.price * item.quantity;
+      lines.push(`${idx + 1}. *${item.name}*`);
+      lines.push(
+        `   ${item.quantity}x @ Rp ${Number(item.price || 0).toLocaleString(
+          "id-ID"
+        )}`
+      );
+      lines.push(`   = Rp ${itemTotal.toLocaleString("id-ID")}`);
+      if (item.note) {
+        lines.push(`   📝 ${item.note}`);
+      }
+      lines.push("");
+    });
+
+    lines.push("═══════════════════");
+    lines.push(`*TOTAL: Rp ${cartTotal.toLocaleString("id-ID")}*`);
+    lines.push(`*(${cartItemsCount} item)*`);
+    lines.push("═══════════════════");
+    lines.push("");
+    lines.push(lang === "id" ? "✅ Terima kasih!" : "✅ Thank you!");
+    lines.push("*- BookletKu -*");
+
+    const message = lines.join("\n");
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    window.open(waUrl, "_blank");
+
+    setTimeout(() => {
+      setCart([]);
+      setSelectedOrderType(null);
+      setIsCartOpen(false);
+      showToast(
+        lang === "id" ? "✅ Pesanan dikirim!" : "✅ Order sent!",
+        "success"
+      );
+    }, 500);
   };
 
   // Filtering items
@@ -660,6 +733,7 @@ export default function PublicMenu() {
           isOpen={!!selectedItem}
           onClose={() => setSelectedItem(null)}
           onAdd={(item, qty, note) => addToCart(item, qty, note)}
+          colors={colors}
         />
       )}
       {/* Order Type Modal */}
@@ -763,38 +837,91 @@ export default function PublicMenu() {
               )}
             </div>
 
-            <footer className="p-4 border-t">
-              <div className="flex items-center justify-between mb-3">
+            <footer className="p-4 border-t bg-white space-y-3">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-gray-500">
-                    {t?.total || (lang === "id" ? "Total" : "Total")}
-                  </div>
-                  <div className="text-xl font-bold">
-                    Rp {Number(cartTotal || 0).toLocaleString("id-ID")}
-                  </div>
-                </div>
-
-                <div className="w-40">
-                  <button
-                    onClick={() => {
-                      if (!selectedOrderType) {
-                        setShowOrderTypeModal(true);
-                        setIsCartOpen(false);
-                      } else {
-                        orderViaWhatsApp();
-                      }
-                    }}
-                    className={`${colors.button} text-white px-4 py-2 rounded-lg`}
-                  >
-                    {t?.orderNow ||
-                      (lang === "id" ? "Pesan Sekarang" : "Order Now")}
-                  </button>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {t?.viaWhatsApp ||
-                      (lang === "id" ? "Via WhatsApp" : "Via WhatsApp")}
+                  <p className="text-xs text-gray-500">
+                    {lang === "id" ? "Total" : "Total"}
+                  </p>
+                  <p className="text-2xl font-bold">
+                    Rp {cartTotal.toLocaleString("id-ID")}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {cartItemsCount} {lang === "id" ? "item" : "items"}
                   </p>
                 </div>
               </div>
+
+              {!selectedOrderType ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs font-medium text-amber-800 mb-2">
+                    {lang === "id"
+                      ? "Pilih tipe pesanan:"
+                      : "Select order type:"}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      {
+                        id: "dine-in",
+                        icon: "🍽️",
+                        label: lang === "id" ? "Makan" : "Dine-in",
+                      },
+                      {
+                        id: "takeaway",
+                        icon: "📦",
+                        label: lang === "id" ? "Bawa" : "Takeaway",
+                      },
+                      {
+                        id: "delivery",
+                        icon: "🚗",
+                        label: lang === "id" ? "Antar" : "Delivery",
+                      },
+                    ].map((type) => (
+                      <button
+                        key={type.id}
+                        onClick={() => setSelectedOrderType(type.id)}
+                        className="px-2 py-2 text-xs rounded-lg border bg-white hover:bg-amber-100 transition-colors font-medium"
+                      >
+                        {type.icon}
+                        <br />
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700 text-center font-medium">
+                  ✅{" "}
+                  {selectedOrderType === "dine-in"
+                    ? lang === "id"
+                      ? "Makan di Tempat"
+                      : "Dine In"
+                    : selectedOrderType === "takeaway"
+                    ? lang === "id"
+                      ? "Bawa Pulang"
+                      : "Takeaway"
+                    : "Delivery"}
+                </div>
+              )}
+
+              <button
+                onClick={orderViaWhatsApp}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors"
+              >
+                <MessageCircle size={20} />
+                {lang === "id" ? "Pesan via WhatsApp" : "Order via WhatsApp"}
+              </button>
+
+              <button
+                onClick={() => {
+                  setCart([]);
+                  setSelectedOrderType(null);
+                  setIsCartOpen(false);
+                }}
+                className="w-full py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                {lang === "id" ? "Kosongkan" : "Clear"}
+              </button>
             </footer>
           </div>
         </div>

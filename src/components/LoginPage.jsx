@@ -18,7 +18,7 @@ import { supabase } from "../config/supabase";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, userRole } = useAuth();
+  const { signIn, signUp } = useAuth();
   const { t, lang } = useLanguage();
   const { template } = useTemplate();
   const colors = getTemplateColors(template);
@@ -32,7 +32,6 @@ export function LoginPage() {
     email: "",
     password: "",
     name: "",
-    role: "user",
   });
 
   const handleChange = (field, value) => {
@@ -61,9 +60,8 @@ export function LoginPage() {
         } else {
           navigate("/");
         }
-
-        return;
       } else {
+        // Sign up only as admin
         if (!form.name.trim()) {
           throw new Error(
             lang === "id" ? "Nama wajib diisi" : "Name is required"
@@ -73,7 +71,7 @@ export function LoginPage() {
           form.email,
           form.password,
           form.name,
-          form.role
+          "admin" // Always register as admin
         );
         if (error) throw error;
         setIsLogin(true);
@@ -117,7 +115,9 @@ export function LoginPage() {
               <Store size={32} />
             </div>
             <h1 className="text-2xl font-bold">BookletKu</h1>
-            <p className="text-white/80 text-sm">{t.tagline}</p>
+            <p className="text-white/80 text-sm">
+              {lang === "id" ? "Login Pemilik Toko" : "Store Owner Login"}
+            </p>
           </div>
 
           {/* Tabs */}
@@ -125,9 +125,7 @@ export function LoginPage() {
             <button
               onClick={() => setIsLogin(true)}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                isLogin
-                  ? `text-[${colors.primary}] border-b-2 border-[${colors.primary}]`
-                  : "text-gray-500"
+                isLogin ? `border-b-2` : "text-gray-500"
               }`}
               style={
                 isLogin
@@ -143,9 +141,7 @@ export function LoginPage() {
             <button
               onClick={() => setIsLogin(false)}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                !isLogin
-                  ? `text-[${colors.primary}] border-b-2 border-[${colors.primary}]`
-                  : "text-gray-500"
+                !isLogin ? `border-b-2` : "text-gray-500"
               }`}
               style={
                 !isLogin
@@ -237,53 +233,6 @@ export function LoginPage() {
               </div>
             </div>
 
-            {/* Role (Register only) */}
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {lang === "id" ? "Daftar sebagai" : "Register as"}
-                </label>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleChange("role", "user")}
-                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
-                    style={
-                      form.role === "user"
-                        ? {
-                            backgroundColor: colors.primary,
-                            color: "white",
-                          }
-                        : {
-                            backgroundColor: "#f3f4f6",
-                            color: "#374151",
-                          }
-                    }
-                  >
-                    {lang === "id" ? "Pelanggan" : "Customer"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleChange("role", "admin")}
-                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
-                    style={
-                      form.role === "admin"
-                        ? {
-                            backgroundColor: colors.primary,
-                            color: "white",
-                          }
-                        : {
-                            backgroundColor: "#f3f4f6",
-                            color: "#374151",
-                          }
-                    }
-                  >
-                    {lang === "id" ? "Pemilik Toko" : "Store Owner"}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Error Message */}
             {error && (
               <div
@@ -347,7 +296,6 @@ export function LoginPage() {
                 {lang === "id" ? "Demo Account:" : "Demo Account:"}
               </p>
               <p>Admin: admin@bookletku.com / admin123</p>
-              <p>User: user@bookletku.com / user123</p>
             </div>
           </div>
         </div>

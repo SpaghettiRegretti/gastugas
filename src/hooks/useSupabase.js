@@ -94,8 +94,36 @@ export function useSupabase() {
   const extractCustomCategories = (items) => {
     const defaultCategories = ["food", "drink", "snack", "dessert", "other"];
     const allCats = [...new Set(items.map((i) => i.category))];
-    setCustomCategories(allCats.filter((c) => !defaultCategories.includes(c)));
+    const custom = allCats.filter((c) => !defaultCategories.includes(c));
+    setCustomCategories(custom);
   };
+
+  // Add Custom Category
+  const addCustomCategory = useCallback(
+    (categoryName) => {
+      const trimmed = categoryName.trim().toLowerCase();
+      const defaultCategories = ["food", "drink", "snack", "dessert", "other"];
+
+      if (!trimmed || trimmed.length < 2 || trimmed.length > 20) {
+        return false;
+      }
+
+      if (
+        defaultCategories.includes(trimmed) ||
+        customCategories.includes(trimmed)
+      ) {
+        return false;
+      }
+
+      if (!/^[a-z0-9\s-]+$/.test(trimmed)) {
+        return false;
+      }
+
+      setCustomCategories((prev) => [...prev, trimmed]);
+      return true;
+    },
+    [customCategories]
+  );
 
   // Initial Load + Realtime
   useEffect(() => {
@@ -162,16 +190,22 @@ export function useSupabase() {
   // Update Item
   const updateItem = async (id, itemData) => {
     try {
+      const updateData = {};
+
+      if (itemData.name !== undefined) updateData.name = itemData.name;
+      if (itemData.price !== undefined) updateData.price = itemData.price;
+      if (itemData.description !== undefined)
+        updateData.description = itemData.description;
+      if (itemData.category !== undefined)
+        updateData.category = itemData.category;
+      if (itemData.photo !== undefined) updateData.photo = itemData.photo;
+      if (itemData.views !== undefined) updateData.views = itemData.views;
+
+      updateData.updated_at = new Date().toISOString();
+
       const { error } = await supabase
         .from("menu_items")
-        .update({
-          name: itemData.name,
-          price: itemData.price,
-          description: itemData.description || "",
-          category: itemData.category,
-          photo: itemData.photo,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", id);
 
       if (error) throw error;
@@ -221,12 +255,10 @@ export function useSupabase() {
 
       if (error) throw error;
 
-      // getPublicUrl returns an object with data.publicUrl
       const { data: urlData } = supabase.storage
         .from(STORAGE_BUCKET)
         .getPublicUrl(fileName);
 
-      // Ensure we return an object with `.url` to match ItemForm's expectation of result.url
       return { url: urlData?.publicUrl || "" };
     } catch (err) {
       console.error("❌ Upload photo:", err);
@@ -234,20 +266,27 @@ export function useSupabase() {
     }
   };
 
-  // Save Store Settings
+  // Save Store Settings - FIXED
   const setSettings = async (s) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from("stores")
         .update({
           name: s.storeName,
           location: s.storeLocation,
           operating_hours: s.operatingHours,
           whatsapp_number: s.whatsappNumber,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", DEFAULT_STORE_ID);
 
+      if (error) throw error;
+
+      // Update local state
       setSettingsState(s);
+
+      // Refresh from database to confirm
+      await fetchSettings();
     } catch (err) {
       console.error("❌ Save settings:", err);
       throw err;
@@ -264,6 +303,7 @@ export function useSupabase() {
     updateItem,
     deleteItem,
     reorderItems,
+    addCustomCategory,
 
     uploadPhoto,
     setSettings,

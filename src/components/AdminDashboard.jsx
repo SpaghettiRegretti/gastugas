@@ -318,11 +318,32 @@ function SettingsPage({ settings, onSave }) {
     whatsappNumber: settings.whatsappNumber || "",
   });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Update form when settings change
+  React.useEffect(() => {
+    setForm({
+      storeName: settings.storeName || "",
+      storeLocation: settings.storeLocation || "",
+      operatingHours: settings.operatingHours || "",
+      whatsappNumber: settings.whatsappNumber || "",
+    });
+  }, [settings]);
 
   const handleSave = async () => {
-    await onSave(form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaving(true);
+    try {
+      await onSave(form);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert(
+        lang === "id" ? "Gagal menyimpan pengaturan" : "Failed to save settings"
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -348,7 +369,7 @@ function SettingsPage({ settings, onSave }) {
             type="text"
             value={form.storeName}
             onChange={(e) => setForm({ ...form, storeName: e.target.value })}
-            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500"
+            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
             placeholder={
               lang === "id"
                 ? "Contoh: Warung Makan Barokah"
@@ -356,6 +377,7 @@ function SettingsPage({ settings, onSave }) {
             }
           />
         </div>
+
         {/* Store Location */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -367,12 +389,13 @@ function SettingsPage({ settings, onSave }) {
             onChange={(e) =>
               setForm({ ...form, storeLocation: e.target.value })
             }
-            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#666fb8]"
+            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
             placeholder={
               lang === "id" ? "Jl. Sudirman No. 123" : "123 Main Street"
             }
           />
         </div>
+
         {/* Operating Hours */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -384,7 +407,7 @@ function SettingsPage({ settings, onSave }) {
             onChange={(e) =>
               setForm({ ...form, operatingHours: e.target.value })
             }
-            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500"
+            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
             placeholder={
               lang === "id"
                 ? "Senin - Minggu, 08:00 - 22:00"
@@ -392,6 +415,7 @@ function SettingsPage({ settings, onSave }) {
             }
           />
         </div>
+
         {/* WhatsApp Number */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -403,7 +427,7 @@ function SettingsPage({ settings, onSave }) {
             onChange={(e) =>
               setForm({ ...form, whatsappNumber: e.target.value })
             }
-            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500"
+            className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
             placeholder="628123456789"
           />
           <p className="text-xs text-gray-500 mt-1">
@@ -412,24 +436,38 @@ function SettingsPage({ settings, onSave }) {
               : "Format: 628xxx (without + or 0)"}
           </p>
         </div>
+
         {/* Save Button */}
         <button
           onClick={handleSave}
+          disabled={saving}
           className={`w-full py-2 rounded-lg font-medium transition-colors ${
             saved
               ? "bg-green-100 text-green-700"
-              : "bg-[#666fb8] text-white hover:bg-[#333fa1]"
+              : saving
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
           }`}
         >
-          {saved ? (lang === "id" ? "Tersimpan!" : "Saved!") : t.save}
+          {saving
+            ? lang === "id"
+              ? "Menyimpan..."
+              : "Saving..."
+            : saved
+            ? lang === "id"
+              ? "Tersimpan!"
+              : "Saved!"
+            : t.save}
         </button>
       </div>
-      {/* NEW: Template Settings */}
+
+      {/* Template Settings */}
       <TemplateSettings
         currentTemplate={template}
         onTemplateChange={setTemplate}
         lang={lang}
       />
+
       {/* Language Settings */}
       <div className="bg-white rounded-xl border shadow-sm p-6">
         <div className="text-center pb-4 border-b mb-4">
@@ -441,7 +479,7 @@ function SettingsPage({ settings, onSave }) {
         <div className="flex justify-center">
           <button
             onClick={toggleLang}
-            className="flex items-center gap-3 px-6 py-3 border-2 rounded-xl hover:border-green-500 hover:bg-green-50"
+            className="flex items-center gap-3 px-6 py-3 border-2 rounded-xl hover:border-blue-500 hover:bg-blue-50"
           >
             <Globe size={22} />
             <div>
@@ -583,6 +621,7 @@ export function AdminDashboard() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Language Toggle */}
               <button
                 onClick={toggleLang}
                 className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
@@ -590,9 +629,11 @@ export function AdminDashboard() {
                 <Globe size={14} />
                 {lang.toUpperCase()}
               </button>
+
+              {/* View Menu Button - NEW */}
               <button
                 onClick={() => navigate("/")}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-100 text-[#333fa1] rounded-lg hover:bg-green-200"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium"
               >
                 <Eye size={14} />
                 {lang === "id" ? "Lihat Menu" : "View Menu"}
